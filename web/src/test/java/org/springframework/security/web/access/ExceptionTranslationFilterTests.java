@@ -48,7 +48,7 @@ import org.springframework.security.web.savedrequest.SavedRequest;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
-import static org.assertj.core.api.Assertions.fail;
+import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.willThrow;
 import static org.mockito.Mockito.mock;
@@ -231,14 +231,15 @@ public class ExceptionTranslationFilterTests {
 		assertThat(getSavedRequestUrl(request)).isEqualTo("http://localhost:8080/mycontext/secure/page.html");
 	}
 
-	@Test(expected = IllegalArgumentException.class)
+	@Test
 	public void startupDetectsMissingAuthenticationEntryPoint() {
-		new ExceptionTranslationFilter(null);
+		assertThatIllegalArgumentException().isThrownBy(() -> new ExceptionTranslationFilter(null));
 	}
 
-	@Test(expected = IllegalArgumentException.class)
+	@Test
 	public void startupDetectsMissingRequestCache() {
-		new ExceptionTranslationFilter(this.mockEntryPoint, null);
+		assertThatIllegalArgumentException()
+				.isThrownBy(() -> new ExceptionTranslationFilter(this.mockEntryPoint, null));
 	}
 
 	@Test
@@ -258,16 +259,12 @@ public class ExceptionTranslationFilterTests {
 		ExceptionTranslationFilter filter = new ExceptionTranslationFilter(this.mockEntryPoint);
 		filter.afterPropertiesSet();
 		Exception[] exceptions = { new IOException(), new ServletException(), new RuntimeException() };
-		for (Exception e : exceptions) {
+		for (Exception exception : exceptions) {
 			FilterChain fc = mock(FilterChain.class);
-			willThrow(e).given(fc).doFilter(any(HttpServletRequest.class), any(HttpServletResponse.class));
-			try {
-				filter.doFilter(new MockHttpServletRequest(), new MockHttpServletResponse(), fc);
-				fail("Should have thrown Exception");
-			}
-			catch (Exception expected) {
-				assertThat(expected).isSameAs(e);
-			}
+			willThrow(exception).given(fc).doFilter(any(HttpServletRequest.class), any(HttpServletResponse.class));
+			assertThatExceptionOfType(Exception.class)
+					.isThrownBy(() -> filter.doFilter(new MockHttpServletRequest(), new MockHttpServletResponse(), fc))
+					.isSameAs(exception);
 		}
 	}
 

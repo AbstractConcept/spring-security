@@ -38,7 +38,7 @@ import org.openid4java.message.ax.FetchResponse;
 import org.springframework.mock.web.MockHttpServletRequest;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.fail;
+import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.mock;
@@ -76,12 +76,13 @@ public class OpenID4JavaConsumerTests {
 		consumer.beginConsumption(request, "", "", "");
 	}
 
-	@Test(expected = OpenIDConsumerException.class)
+	@Test
 	public void discoveryExceptionRaisesOpenIDException() throws Exception {
 		ConsumerManager mgr = mock(ConsumerManager.class);
 		OpenID4JavaConsumer consumer = new OpenID4JavaConsumer(mgr, new NullAxFetchListFactory());
 		given(mgr.discover(any())).willThrow(new DiscoveryException("msg"));
-		consumer.beginConsumption(new MockHttpServletRequest(), "", "", "");
+		assertThatExceptionOfType(OpenIDConsumerException.class)
+				.isThrownBy(() -> consumer.beginConsumption(new MockHttpServletRequest(), "", "", ""));
 	}
 
 	@Test
@@ -90,18 +91,10 @@ public class OpenID4JavaConsumerTests {
 		OpenID4JavaConsumer consumer = new OpenID4JavaConsumer(mgr, new NullAxFetchListFactory());
 		given(mgr.authenticate(ArgumentMatchers.<DiscoveryInformation>any(), any(), any()))
 				.willThrow(new MessageException("msg"), new ConsumerException("msg"));
-		try {
-			consumer.beginConsumption(new MockHttpServletRequest(), "", "", "");
-			fail("OpenIDConsumerException was not thrown");
-		}
-		catch (OpenIDConsumerException expected) {
-		}
-		try {
-			consumer.beginConsumption(new MockHttpServletRequest(), "", "", "");
-			fail("OpenIDConsumerException was not thrown");
-		}
-		catch (OpenIDConsumerException expected) {
-		}
+		assertThatExceptionOfType(OpenIDConsumerException.class)
+				.isThrownBy(() -> consumer.beginConsumption(new MockHttpServletRequest(), "", "", ""));
+		assertThatExceptionOfType(OpenIDConsumerException.class)
+				.isThrownBy(() -> consumer.beginConsumption(new MockHttpServletRequest(), "", "", ""));
 	}
 
 	@Test
@@ -125,24 +118,9 @@ public class OpenID4JavaConsumerTests {
 				.willThrow(new MessageException(""), new AssociationException(""), new DiscoveryException(""));
 		MockHttpServletRequest request = new MockHttpServletRequest();
 		request.setQueryString("x=5");
-		try {
-			consumer.endConsumption(request);
-			fail("OpenIDConsumerException was not thrown");
-		}
-		catch (OpenIDConsumerException expected) {
-		}
-		try {
-			consumer.endConsumption(request);
-			fail("OpenIDConsumerException was not thrown");
-		}
-		catch (OpenIDConsumerException expected) {
-		}
-		try {
-			consumer.endConsumption(request);
-			fail("OpenIDConsumerException was not thrown");
-		}
-		catch (OpenIDConsumerException expected) {
-		}
+		assertThatExceptionOfType(OpenIDConsumerException.class).isThrownBy(() -> consumer.endConsumption(request));
+		assertThatExceptionOfType(OpenIDConsumerException.class).isThrownBy(() -> consumer.endConsumption(request));
+		assertThatExceptionOfType(OpenIDConsumerException.class).isThrownBy(() -> consumer.endConsumption(request));
 	}
 
 	@SuppressWarnings("serial")
@@ -177,7 +155,7 @@ public class OpenID4JavaConsumerTests {
 		assertThat(fetched.get(0).getValues()).hasSize(2);
 	}
 
-	@Test(expected = OpenIDConsumerException.class)
+	@Test
 	public void messageExceptionFetchingAttributesRaisesOpenIDException() throws Exception {
 		OpenID4JavaConsumer consumer = new OpenID4JavaConsumer(new NullAxFetchListFactory());
 		Message msg = mock(Message.class);
@@ -185,13 +163,15 @@ public class OpenID4JavaConsumerTests {
 		given(msg.hasExtension(AxMessage.OPENID_NS_AX)).willReturn(true);
 		given(msg.getExtension(AxMessage.OPENID_NS_AX)).willThrow(new MessageException(""));
 		given(fr.getAttributeValues("a")).willReturn(Arrays.asList("x", "y"));
-		consumer.fetchAxAttributes(msg, this.attributes);
+		assertThatExceptionOfType(OpenIDConsumerException.class)
+				.isThrownBy(() -> consumer.fetchAxAttributes(msg, this.attributes));
 	}
 
-	@Test(expected = OpenIDConsumerException.class)
+	@Test
 	public void missingDiscoveryInformationThrowsException() throws Exception {
 		OpenID4JavaConsumer consumer = new OpenID4JavaConsumer(new NullAxFetchListFactory());
-		consumer.endConsumption(new MockHttpServletRequest());
+		assertThatExceptionOfType(OpenIDConsumerException.class)
+				.isThrownBy(() -> consumer.endConsumption(new MockHttpServletRequest()));
 	}
 
 	@Test

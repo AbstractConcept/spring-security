@@ -7,13 +7,13 @@ if (!project.hasProperty("springVersion")) {
 }
 
 if (!project.hasProperty("springDataVersion")) {
-	ext.springDataVersion = "Moore-SR+"
+	ext.springDataVersion = "Neumann-SR+"
 }
 if (!project.hasProperty("kotlinVersion")) {
 	ext.kotlinVersion = "1.+"
 }
 if (!project.hasProperty("rsocketVersion")) {
-	ext.rsocketVersion = "1.+"
+	ext.rsocketVersion = "1.0.+"
 }
 if (!project.hasProperty("locksDisabled")) {
 	dependencyLocking {

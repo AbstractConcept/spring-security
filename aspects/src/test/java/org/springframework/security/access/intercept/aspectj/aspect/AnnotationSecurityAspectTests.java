@@ -49,7 +49,7 @@ import org.springframework.security.authentication.TestingAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.fail;
+import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 
 /**
  * @author Luke Taylor
@@ -98,9 +98,10 @@ public class AnnotationSecurityAspectTests {
 		this.secured.securedMethod();
 	}
 
-	@Test(expected = AuthenticationCredentialsNotFoundException.class)
+	@Test
 	public void securedClassMethodDeniesUnauthenticatedAccess() {
-		this.secured.securedClassMethod();
+		assertThatExceptionOfType(AuthenticationCredentialsNotFoundException.class)
+				.isThrownBy(() -> this.secured.securedClassMethod());
 	}
 
 	@Test
@@ -109,22 +110,17 @@ public class AnnotationSecurityAspectTests {
 		this.secured.securedClassMethod();
 	}
 
-	@Test(expected = AccessDeniedException.class)
+	@Test
 	public void internalPrivateCallIsIntercepted() {
 		SecurityContextHolder.getContext().setAuthentication(this.anne);
-		try {
-			this.secured.publicCallsPrivate();
-			fail("Expected AccessDeniedException");
-		}
-		catch (AccessDeniedException expected) {
-		}
-		this.securedSub.publicCallsPrivate();
+		assertThatExceptionOfType(AccessDeniedException.class).isThrownBy(() -> this.secured.publicCallsPrivate());
+		assertThatExceptionOfType(AccessDeniedException.class).isThrownBy(() -> this.securedSub.publicCallsPrivate());
 	}
 
-	@Test(expected = AccessDeniedException.class)
+	@Test
 	public void protectedMethodIsIntercepted() {
 		SecurityContextHolder.getContext().setAuthentication(this.anne);
-		this.secured.protectedMethod();
+		assertThatExceptionOfType(AccessDeniedException.class).isThrownBy(() -> this.secured.protectedMethod());
 	}
 
 	@Test
@@ -134,11 +130,11 @@ public class AnnotationSecurityAspectTests {
 	}
 
 	// SEC-1262
-	@Test(expected = AccessDeniedException.class)
+	@Test
 	public void denyAllPreAuthorizeDeniesAccess() {
 		configureForElAnnotations();
 		SecurityContextHolder.getContext().setAuthentication(this.anne);
-		this.prePostSecured.denyAllMethod();
+		assertThatExceptionOfType(AccessDeniedException.class).isThrownBy(this.prePostSecured::denyAllMethod);
 	}
 
 	@Test

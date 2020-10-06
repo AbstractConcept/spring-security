@@ -42,7 +42,8 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.web.FilterInvocation;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.fail;
+import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
+import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyCollection;
 import static org.mockito.ArgumentMatchers.eq;
@@ -95,16 +96,16 @@ public class FilterSecurityInterceptorTests {
 		SecurityContextHolder.clearContext();
 	}
 
-	@Test(expected = IllegalArgumentException.class)
+	@Test
 	public void testEnsuresAccessDecisionManagerSupportsFilterInvocationClass() throws Exception {
 		given(this.adm.supports(FilterInvocation.class)).willReturn(true);
-		this.interceptor.afterPropertiesSet();
+		assertThatIllegalArgumentException().isThrownBy(this.interceptor::afterPropertiesSet);
 	}
 
-	@Test(expected = IllegalArgumentException.class)
+	@Test
 	public void testEnsuresRunAsManagerSupportsFilterInvocationClass() throws Exception {
 		given(this.adm.supports(FilterInvocation.class)).willReturn(false);
-		this.interceptor.afterPropertiesSet();
+		assertThatIllegalArgumentException().isThrownBy(this.interceptor::afterPropertiesSet);
 	}
 
 	/**
@@ -135,12 +136,7 @@ public class FilterSecurityInterceptorTests {
 		given(this.ods.getAttributes(fi)).willReturn(SecurityConfig.createList("MOCK_OK"));
 		AfterInvocationManager aim = mock(AfterInvocationManager.class);
 		this.interceptor.setAfterInvocationManager(aim);
-		try {
-			this.interceptor.invoke(fi);
-			fail("Expected exception");
-		}
-		catch (RuntimeException expected) {
-		}
+		assertThatExceptionOfType(RuntimeException.class).isThrownBy(() -> this.interceptor.invoke(fi));
 		verifyZeroInteractions(aim);
 	}
 
@@ -163,12 +159,7 @@ public class FilterSecurityInterceptorTests {
 		given(this.ods.getAttributes(fi)).willReturn(SecurityConfig.createList("MOCK_OK"));
 		AfterInvocationManager aim = mock(AfterInvocationManager.class);
 		this.interceptor.setAfterInvocationManager(aim);
-		try {
-			this.interceptor.invoke(fi);
-			fail("Expected exception");
-		}
-		catch (RuntimeException expected) {
-		}
+		assertThatExceptionOfType(RuntimeException.class).isThrownBy(() -> this.interceptor.invoke(fi));
 		// Check we've changed back
 		assertThat(SecurityContextHolder.getContext()).isSameAs(ctx);
 		assertThat(SecurityContextHolder.getContext().getAuthentication()).isSameAs(token);

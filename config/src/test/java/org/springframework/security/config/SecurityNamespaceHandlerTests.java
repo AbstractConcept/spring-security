@@ -17,9 +17,7 @@
 package org.springframework.security.config;
 
 import org.apache.commons.logging.Log;
-import org.junit.Rule;
 import org.junit.Test;
-import org.junit.rules.ExpectedException;
 import org.junit.runner.RunWith;
 import org.powermock.api.mockito.PowerMockito;
 import org.powermock.core.classloader.annotations.PowerMockIgnore;
@@ -32,8 +30,7 @@ import org.springframework.security.config.util.InMemoryXmlApplicationContext;
 import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.util.ClassUtils;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.fail;
+import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
@@ -48,9 +45,6 @@ import static org.mockito.Mockito.verifyZeroInteractions;
 @PrepareForTest({ ClassUtils.class })
 @PowerMockIgnore({ "org.w3c.dom.*", "org.xml.sax.*", "org.apache.xerces.*", "javax.xml.parsers.*" })
 public class SecurityNamespaceHandlerTests {
-
-	@Rule
-	public ExpectedException thrown = ExpectedException.none();
 
 	// @formatter:off
 	private static final String XML_AUTHENTICATION_MANAGER = "<authentication-manager>"
@@ -78,15 +72,11 @@ public class SecurityNamespaceHandlerTests {
 
 	@Test
 	public void pre32SchemaAreNotSupported() {
-		try {
-			new InMemoryXmlApplicationContext("<user-service id='us'>"
-					+ "  <user name='bob' password='bobspassword' authorities='ROLE_A' />" + "</user-service>", "3.0.3",
-					null);
-			fail("Expected BeanDefinitionParsingException");
-		}
-		catch (BeanDefinitionParsingException expected) {
-			assertThat(expected.getMessage().contains("You cannot use a spring-security-2.0.xsd"));
-		}
+		assertThatExceptionOfType(BeanDefinitionParsingException.class)
+				.isThrownBy(() -> new InMemoryXmlApplicationContext(
+						"<user-service id='us'><user name='bob' password='bobspassword' authorities='ROLE_A' /></user-service>",
+						"3.0.3", null))
+				.withMessageContaining("You cannot use a spring-security-2.0.xsd");
 	}
 
 	// SEC-1868
@@ -108,12 +98,12 @@ public class SecurityNamespaceHandlerTests {
 	@Test
 	public void filterNoClassDefFoundError() throws Exception {
 		String className = "javax.servlet.Filter";
-		this.thrown.expect(BeanDefinitionParsingException.class);
-		this.thrown.expectMessage("NoClassDefFoundError: " + className);
 		PowerMockito.spy(ClassUtils.class);
 		PowerMockito.doThrow(new NoClassDefFoundError(className)).when(ClassUtils.class, "forName",
 				eq(FILTER_CHAIN_PROXY_CLASSNAME), any(ClassLoader.class));
-		new InMemoryXmlApplicationContext(XML_AUTHENTICATION_MANAGER + XML_HTTP_BLOCK);
+		assertThatExceptionOfType(BeanDefinitionParsingException.class)
+				.isThrownBy(() -> new InMemoryXmlApplicationContext(XML_AUTHENTICATION_MANAGER + XML_HTTP_BLOCK))
+				.withMessageContaining("NoClassDefFoundError: " + className);
 	}
 
 	@Test
@@ -129,12 +119,12 @@ public class SecurityNamespaceHandlerTests {
 	@Test
 	public void filterChainProxyClassNotFoundException() throws Exception {
 		String className = FILTER_CHAIN_PROXY_CLASSNAME;
-		this.thrown.expect(BeanDefinitionParsingException.class);
-		this.thrown.expectMessage("ClassNotFoundException: " + className);
 		PowerMockito.spy(ClassUtils.class);
 		PowerMockito.doThrow(new ClassNotFoundException(className)).when(ClassUtils.class, "forName",
 				eq(FILTER_CHAIN_PROXY_CLASSNAME), any(ClassLoader.class));
-		new InMemoryXmlApplicationContext(XML_AUTHENTICATION_MANAGER + XML_HTTP_BLOCK);
+		assertThatExceptionOfType(BeanDefinitionParsingException.class)
+				.isThrownBy(() -> new InMemoryXmlApplicationContext(XML_AUTHENTICATION_MANAGER + XML_HTTP_BLOCK))
+				.withMessageContaining("ClassNotFoundException: " + className);
 	}
 
 	@Test

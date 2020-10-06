@@ -44,7 +44,8 @@ import org.springframework.security.core.session.SessionDestroyedEvent;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.fail;
+import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
+import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isA;
@@ -82,16 +83,16 @@ public class DefaultJaasAuthenticationProviderTests {
 		ReflectionTestUtils.setField(this.provider, "log", this.log);
 	}
 
-	@Test(expected = IllegalArgumentException.class)
+	@Test
 	public void afterPropertiesSetNullConfiguration() throws Exception {
 		this.provider.setConfiguration(null);
-		this.provider.afterPropertiesSet();
+		assertThatIllegalArgumentException().isThrownBy(this.provider::afterPropertiesSet);
 	}
 
-	@Test(expected = IllegalArgumentException.class)
+	@Test
 	public void afterPropertiesSetNullAuthorityGranters() throws Exception {
 		this.provider.setAuthorityGranters(null);
-		this.provider.afterPropertiesSet();
+		assertThatIllegalArgumentException().isThrownBy(this.provider::afterPropertiesSet);
 	}
 
 	@Test
@@ -112,23 +113,15 @@ public class DefaultJaasAuthenticationProviderTests {
 
 	@Test
 	public void authenticateBadPassword() {
-		try {
-			this.provider.authenticate(new UsernamePasswordAuthenticationToken("user", "asdf"));
-			fail("LoginException should have been thrown for the bad password");
-		}
-		catch (AuthenticationException success) {
-		}
+		assertThatExceptionOfType(AuthenticationException.class)
+				.isThrownBy(() -> this.provider.authenticate(new UsernamePasswordAuthenticationToken("user", "asdf")));
 		verifyFailedLogin();
 	}
 
 	@Test
 	public void authenticateBadUser() {
-		try {
-			this.provider.authenticate(new UsernamePasswordAuthenticationToken("asdf", "password"));
-			fail("LoginException should have been thrown for the bad user");
-		}
-		catch (AuthenticationException success) {
-		}
+		assertThatExceptionOfType(AuthenticationException.class).isThrownBy(
+				() -> this.provider.authenticate(new UsernamePasswordAuthenticationToken("asdf", "password")));
 		verifyFailedLogin();
 	}
 

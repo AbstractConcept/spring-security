@@ -26,7 +26,7 @@ import org.springframework.security.config.authentication.AuthenticationManagerF
 import org.springframework.security.config.util.InMemoryXmlApplicationContext;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.Assert.fail;
+import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 
 /**
  * Tests which make sure invalid configurations are rejected by the namespace. In
@@ -47,29 +47,28 @@ public class InvalidConfigurationTests {
 	}
 
 	// Parser should throw a SAXParseException
-	@Test(expected = XmlBeanDefinitionStoreException.class)
+	@Test
 	public void passwordEncoderCannotAppearAtTopLevel() {
-		setContext("<password-encoder hash='md5'/>");
+		assertThatExceptionOfType(XmlBeanDefinitionStoreException.class)
+				.isThrownBy(() -> setContext("<password-encoder hash='md5'/>"));
 	}
 
-	@Test(expected = XmlBeanDefinitionStoreException.class)
+	@Test
 	public void authenticationProviderCannotAppearAtTopLevel() {
-		setContext("<authentication-provider ref='blah'/>");
+		assertThatExceptionOfType(XmlBeanDefinitionStoreException.class)
+				.isThrownBy(() -> setContext("<authentication-provider ref='blah'/>"));
 	}
 
 	@Test
 	public void missingAuthenticationManagerGivesSensibleErrorMessage() {
-		try {
-			setContext("<http auto-config='true' />");
-			fail();
-		}
-		catch (BeanCreationException ex) {
-			Throwable cause = ultimateCause(ex);
-			assertThat(cause instanceof NoSuchBeanDefinitionException).isTrue();
-			NoSuchBeanDefinitionException nsbe = (NoSuchBeanDefinitionException) cause;
-			assertThat(nsbe.getBeanName()).isEqualTo(BeanIds.AUTHENTICATION_MANAGER);
-			assertThat(nsbe.getMessage()).endsWith(AuthenticationManagerFactoryBean.MISSING_BEAN_ERROR_MESSAGE);
-		}
+		assertThatExceptionOfType(BeanCreationException.class)
+				.isThrownBy(() -> setContext("<http auto-config='true' />")).satisfies((ex) -> {
+					Throwable cause = ultimateCause(ex);
+					assertThat(cause).isInstanceOf(NoSuchBeanDefinitionException.class);
+					NoSuchBeanDefinitionException nsbe = (NoSuchBeanDefinitionException) cause;
+					assertThat(nsbe.getBeanName()).isEqualTo(BeanIds.AUTHENTICATION_MANAGER);
+					assertThat(nsbe.getMessage()).endsWith(AuthenticationManagerFactoryBean.MISSING_BEAN_ERROR_MESSAGE);
+				});
 	}
 
 	private Throwable ultimateCause(Throwable ex) {

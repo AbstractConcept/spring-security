@@ -26,7 +26,7 @@ import org.springframework.security.authentication.AuthenticationCredentialsNotF
 import org.springframework.security.config.util.InMemoryXmlApplicationContext;
 import org.springframework.security.core.context.SecurityContextHolder;
 
-import static org.assertj.core.api.Assertions.fail;
+import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 
 /**
  * Tests for SEC-428 (and SEC-1204).
@@ -84,7 +84,7 @@ public class MethodSecurityInterceptorWithAopConfigTests {
 		}
 	}
 
-	@Test(expected = AuthenticationCredentialsNotFoundException.class)
+	@Test
 	public void securityInterceptorIsAppliedWhenUsedWithAopConfig() {
 		// @formatter:off
 		setContext("<aop:config>"
@@ -97,16 +97,13 @@ public class MethodSecurityInterceptorWithAopConfigTests {
 		// @formatter:on
 		ITargetObject target = (ITargetObject) this.appContext.getBean("target");
 		// Check both against interface and class
-		try {
-			target.makeLowerCase("TEST");
-			fail("AuthenticationCredentialsNotFoundException expected");
-		}
-		catch (AuthenticationCredentialsNotFoundException expected) {
-		}
-		target.makeUpperCase("test");
+		assertThatExceptionOfType(AuthenticationCredentialsNotFoundException.class)
+				.isThrownBy(() -> target.makeLowerCase("TEST"));
+		assertThatExceptionOfType(AuthenticationCredentialsNotFoundException.class)
+				.isThrownBy(() -> target.makeUpperCase("test"));
 	}
 
-	@Test(expected = AuthenticationCredentialsNotFoundException.class)
+	@Test
 	public void securityInterceptorIsAppliedWhenUsedWithBeanNameAutoProxyCreator() {
 		// @formatter:off
 		setContext("<b:bean id='autoProxyCreator' class='org.springframework.aop.framework.autoproxy.BeanNameAutoProxyCreator'>"
@@ -128,13 +125,10 @@ public class MethodSecurityInterceptorWithAopConfigTests {
 		// @formatter:on
 
 		ITargetObject target = (ITargetObject) this.appContext.getBean("target");
-		try {
-			target.makeLowerCase("TEST");
-			fail("AuthenticationCredentialsNotFoundException expected");
-		}
-		catch (AuthenticationCredentialsNotFoundException expected) {
-		}
-		target.makeUpperCase("test");
+		assertThatExceptionOfType(AuthenticationCredentialsNotFoundException.class)
+				.isThrownBy(() -> target.makeLowerCase("TEST"));
+		assertThatExceptionOfType(AuthenticationCredentialsNotFoundException.class)
+				.isThrownBy(() -> target.makeUpperCase("test"));
 	}
 
 	private void setContext(String context) {

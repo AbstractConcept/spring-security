@@ -29,7 +29,8 @@ import org.mockito.junit.MockitoJUnitRunner;
 
 import org.springframework.security.core.Authentication;
 
-import static org.assertj.core.api.Assertions.fail;
+import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
+import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
 import static org.mockito.BDDMockito.willThrow;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -56,19 +57,21 @@ public class CompositeSessionAuthenticationStrategyTests {
 	@Mock
 	private HttpServletResponse response;
 
-	@Test(expected = IllegalArgumentException.class)
+	@Test
 	public void constructorNullDelegates() {
-		new CompositeSessionAuthenticationStrategy(null);
+		assertThatIllegalArgumentException().isThrownBy(() -> new CompositeSessionAuthenticationStrategy(null));
 	}
 
-	@Test(expected = IllegalArgumentException.class)
+	@Test
 	public void constructorEmptyDelegates() {
-		new CompositeSessionAuthenticationStrategy(Collections.<SessionAuthenticationStrategy>emptyList());
+		assertThatIllegalArgumentException().isThrownBy(() -> new CompositeSessionAuthenticationStrategy(
+				Collections.<SessionAuthenticationStrategy>emptyList()));
 	}
 
-	@Test(expected = IllegalArgumentException.class)
+	@Test
 	public void constructorDelegatesContainNull() {
-		new CompositeSessionAuthenticationStrategy(Collections.<SessionAuthenticationStrategy>singletonList(null));
+		assertThatIllegalArgumentException().isThrownBy(() -> new CompositeSessionAuthenticationStrategy(
+				Collections.<SessionAuthenticationStrategy>singletonList(null)));
 	}
 
 	@Test
@@ -86,12 +89,8 @@ public class CompositeSessionAuthenticationStrategyTests {
 				.onAuthentication(this.authentication, this.request, this.response);
 		CompositeSessionAuthenticationStrategy strategy = new CompositeSessionAuthenticationStrategy(
 				Arrays.asList(this.strategy1, this.strategy2));
-		try {
-			strategy.onAuthentication(this.authentication, this.request, this.response);
-			fail("Expected Exception");
-		}
-		catch (SessionAuthenticationException success) {
-		}
+		assertThatExceptionOfType(SessionAuthenticationException.class)
+				.isThrownBy(() -> strategy.onAuthentication(this.authentication, this.request, this.response));
 		verify(this.strategy1).onAuthentication(this.authentication, this.request, this.response);
 		verify(this.strategy2, times(0)).onAuthentication(this.authentication, this.request, this.response);
 	}

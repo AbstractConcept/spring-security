@@ -39,7 +39,7 @@ import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit4.SpringRunner;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.fail;
+import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 
 /**
  * @author Luke Taylor
@@ -118,9 +118,9 @@ public class LdapUserDetailsManagerTests {
 		assertThat(bob.getAuthorities()).hasSize(1);
 	}
 
-	@Test(expected = UsernameNotFoundException.class)
+	@Test
 	public void testLoadingInvalidUsernameThrowsUsernameNotFoundException() {
-		this.mgr.loadUserByUsername("jim");
+		assertThatExceptionOfType(UsernameNotFoundException.class).isThrownBy(() -> this.mgr.loadUserByUsername("jim"));
 	}
 
 	@Test
@@ -174,14 +174,7 @@ public class LdapUserDetailsManagerTests {
 		assertThat(don.getAuthorities()).hasSize(2);
 
 		this.mgr.deleteUser("don");
-
-		try {
-			this.mgr.loadUserByUsername("don");
-			fail("Expected UsernameNotFoundException after deleting user");
-		}
-		catch (UsernameNotFoundException expected) {
-			// expected
-		}
+		assertThatExceptionOfType(UsernameNotFoundException.class).isThrownBy(() -> this.mgr.loadUserByUsername("don"));
 
 		// Check that no authorities are left
 		assertThat(this.mgr.getUserAuthorities(this.mgr.usernameMapper.buildDn("don"), "don")).hasSize(0);
@@ -208,7 +201,7 @@ public class LdapUserDetailsManagerTests {
 				.isTrue();
 	}
 
-	@Test(expected = BadCredentialsException.class)
+	@Test
 	public void testPasswordChangeWithWrongOldPasswordFails() {
 		InetOrgPerson.Essence p = new InetOrgPerson.Essence();
 		p.setDn("whocares");
@@ -217,13 +210,11 @@ public class LdapUserDetailsManagerTests {
 		p.setUid("johnyossarian");
 		p.setPassword("yossarianspassword");
 		p.setAuthorities(TEST_AUTHORITIES);
-
 		this.mgr.createUser(p.createUserDetails());
-
 		SecurityContextHolder.getContext().setAuthentication(
 				new UsernamePasswordAuthenticationToken("johnyossarian", "yossarianspassword", TEST_AUTHORITIES));
-
-		this.mgr.changePassword("wrongpassword", "yossariansnewpassword");
+		assertThatExceptionOfType(BadCredentialsException.class)
+				.isThrownBy(() -> this.mgr.changePassword("wrongpassword", "yossariansnewpassword"));
 	}
 
 }

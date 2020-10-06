@@ -20,17 +20,14 @@ import javax.servlet.http.HttpServletResponse;
 
 import org.junit.Assert;
 import org.junit.Before;
-import org.junit.Rule;
 import org.junit.Test;
-import org.junit.rules.ExpectedException;
 
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.security.saml2.provider.service.authentication.Saml2AuthenticationException;
 import org.springframework.security.saml2.provider.service.registration.RelyingPartyRegistrationRepository;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.failBecauseExceptionWasNotThrown;
+import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.mock;
 
@@ -44,9 +41,6 @@ public class Saml2WebSsoAuthenticationFilterTests {
 
 	private HttpServletResponse response = new MockHttpServletResponse();
 
-	@Rule
-	public ExpectedException exception = ExpectedException.none();
-
 	@Before
 	public void setup() {
 		this.filter = new Saml2WebSsoAuthenticationFilter(this.repository);
@@ -56,9 +50,9 @@ public class Saml2WebSsoAuthenticationFilterTests {
 
 	@Test
 	public void constructingFilterWithMissingRegistrationIdVariableThenThrowsException() {
-		this.exception.expect(IllegalArgumentException.class);
-		this.exception.expectMessage("filterProcessesUrl must contain a {registrationId} match variable");
-		this.filter = new Saml2WebSsoAuthenticationFilter(this.repository, "/url/missing/variable");
+		assertThatExceptionOfType(IllegalArgumentException.class).isThrownBy(
+				() -> this.filter = new Saml2WebSsoAuthenticationFilter(this.repository, "/url/missing/variable"))
+				.withMessage("filterProcessesUrl must contain a {registrationId} match variable");
 	}
 
 	@Test
@@ -85,14 +79,9 @@ public class Saml2WebSsoAuthenticationFilterTests {
 		this.filter = new Saml2WebSsoAuthenticationFilter(this.repository, "/some/other/path/{registrationId}");
 		this.request.setPathInfo("/some/other/path/non-existent-id");
 		this.request.setParameter("SAMLResponse", "response");
-		try {
-			this.filter.attemptAuthentication(this.request, this.response);
-			failBecauseExceptionWasNotThrown(Saml2AuthenticationException.class);
-		}
-		catch (Exception ex) {
-			assertThat(ex).isInstanceOf(Saml2AuthenticationException.class);
-			assertThat(ex.getMessage()).isEqualTo("No relying party registration found");
-		}
+		assertThatExceptionOfType(Saml2AuthenticationException.class)
+				.isThrownBy(() -> this.filter.attemptAuthentication(this.request, this.response))
+				.withMessage("No relying party registration found");
 	}
 
 }

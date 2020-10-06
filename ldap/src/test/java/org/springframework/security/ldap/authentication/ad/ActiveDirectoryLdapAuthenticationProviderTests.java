@@ -30,14 +30,8 @@ import javax.naming.directory.SearchControls;
 import javax.naming.directory.SearchResult;
 
 import org.apache.directory.shared.ldap.util.EmptyEnumeration;
-import org.hamcrest.BaseMatcher;
-import org.hamcrest.CoreMatchers;
-import org.hamcrest.Description;
-import org.hamcrest.Matcher;
 import org.junit.Before;
-import org.junit.Rule;
 import org.junit.Test;
-import org.junit.rules.ExpectedException;
 import org.mockito.ArgumentCaptor;
 
 import org.springframework.dao.IncorrectResultSizeDataAccessException;
@@ -54,7 +48,8 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.ldap.authentication.ad.ActiveDirectoryLdapAuthenticationProvider.ContextFactory;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.fail;
+import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
+import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
@@ -70,9 +65,6 @@ public class ActiveDirectoryLdapAuthenticationProviderTests {
 	public static final String EXISTING_LDAP_PROVIDER = "ldap://192.168.1.200/";
 
 	public static final String NON_EXISTING_LDAP_PROVIDER = "ldap://192.168.1.201/";
-
-	@Rule
-	public ExpectedException thrown = ExpectedException.none();
 
 	ActiveDirectoryLdapAuthenticationProvider provider;
 
@@ -149,14 +141,14 @@ public class ActiveDirectoryLdapAuthenticationProviderTests {
 		assertThat(result.isAuthenticated()).isTrue();
 	}
 
-	@Test(expected = IllegalArgumentException.class)
+	@Test
 	public void setSearchFilterNull() {
-		this.provider.setSearchFilter(null);
+		assertThatIllegalArgumentException().isThrownBy(() -> this.provider.setSearchFilter(null));
 	}
 
-	@Test(expected = IllegalArgumentException.class)
+	@Test
 	public void setSearchFilterEmpty() {
-		this.provider.setSearchFilter(" ");
+		assertThatIllegalArgumentException().isThrownBy(() -> this.provider.setSearchFilter(" "));
 	}
 
 	@Test
@@ -169,44 +161,40 @@ public class ActiveDirectoryLdapAuthenticationProviderTests {
 		given(ctx.search(eq(new DistinguishedName("DC=mydomain,DC=eu")), any(String.class), any(Object[].class),
 				any(SearchControls.class))).willReturn(new MockNamingEnumeration(sr));
 		this.provider.contextFactory = createContextFactoryReturning(ctx);
-		try {
-			this.provider.authenticate(this.joe);
-			fail("Expected BadCredentialsException for user with no domain information");
-		}
-		catch (BadCredentialsException expected) {
-		}
+		assertThatExceptionOfType(BadCredentialsException.class).isThrownBy(() -> this.provider.authenticate(this.joe));
 		this.provider.authenticate(new UsernamePasswordAuthenticationToken("joe@mydomain.eu", "password"));
 	}
 
-	@Test(expected = BadCredentialsException.class)
+	@Test
 	public void failedUserSearchCausesBadCredentials() throws Exception {
 		DirContext ctx = mock(DirContext.class);
 		given(ctx.getNameInNamespace()).willReturn("");
 		given(ctx.search(any(Name.class), any(String.class), any(Object[].class), any(SearchControls.class)))
 				.willThrow(new NameNotFoundException());
 		this.provider.contextFactory = createContextFactoryReturning(ctx);
-		this.provider.authenticate(this.joe);
+		assertThatExceptionOfType(BadCredentialsException.class).isThrownBy(() -> this.provider.authenticate(this.joe));
 	}
 
 	// SEC-2017
-	@Test(expected = BadCredentialsException.class)
+	@Test
 	public void noUserSearchCausesUsernameNotFound() throws Exception {
 		DirContext ctx = mock(DirContext.class);
 		given(ctx.getNameInNamespace()).willReturn("");
 		given(ctx.search(any(Name.class), any(String.class), any(Object[].class), any(SearchControls.class)))
 				.willReturn(new EmptyEnumeration<>());
 		this.provider.contextFactory = createContextFactoryReturning(ctx);
-		this.provider.authenticate(this.joe);
+		assertThatExceptionOfType(BadCredentialsException.class).isThrownBy(() -> this.provider.authenticate(this.joe));
 	}
 
 	// SEC-2500
-	@Test(expected = BadCredentialsException.class)
+	@Test
 	public void sec2500PreventAnonymousBind() {
-		this.provider.authenticate(new UsernamePasswordAuthenticationToken("rwinch", ""));
+		assertThatExceptionOfType(BadCredentialsException.class)
+				.isThrownBy(() -> this.provider.authenticate(new UsernamePasswordAuthenticationToken("rwinch", "")));
 	}
 
+	@Test
 	@SuppressWarnings("unchecked")
-	@Test(expected = IncorrectResultSizeDataAccessException.class)
 	public void duplicateUserSearchCausesError() throws Exception {
 		DirContext ctx = mock(DirContext.class);
 		given(ctx.getNameInNamespace()).willReturn("");
@@ -218,30 +206,31 @@ public class ActiveDirectoryLdapAuthenticationProviderTests {
 		given(ctx.search(any(Name.class), any(String.class), any(Object[].class), any(SearchControls.class)))
 				.willReturn(searchResults);
 		this.provider.contextFactory = createContextFactoryReturning(ctx);
-		this.provider.authenticate(this.joe);
+		assertThatExceptionOfType(IncorrectResultSizeDataAccessException.class)
+				.isThrownBy(() -> this.provider.authenticate(this.joe));
 	}
 
 	static final String msg = "[LDAP: error code 49 - 80858585: LdapErr: DSID-DECAFF0, comment: AcceptSecurityContext error, data ";
 
-	@Test(expected = BadCredentialsException.class)
+	@Test
 	public void userNotFoundIsCorrectlyMapped() {
 		this.provider.contextFactory = createContextFactoryThrowing(new AuthenticationException(msg + "525, xxxx]"));
 		this.provider.setConvertSubErrorCodesToExceptions(true);
-		this.provider.authenticate(this.joe);
+		assertThatExceptionOfType(BadCredentialsException.class).isThrownBy(() -> this.provider.authenticate(this.joe));
 	}
 
-	@Test(expected = BadCredentialsException.class)
+	@Test
 	public void incorrectPasswordIsCorrectlyMapped() {
 		this.provider.contextFactory = createContextFactoryThrowing(new AuthenticationException(msg + "52e, xxxx]"));
 		this.provider.setConvertSubErrorCodesToExceptions(true);
-		this.provider.authenticate(this.joe);
+		assertThatExceptionOfType(BadCredentialsException.class).isThrownBy(() -> this.provider.authenticate(this.joe));
 	}
 
-	@Test(expected = BadCredentialsException.class)
+	@Test
 	public void notPermittedIsCorrectlyMapped() {
 		this.provider.contextFactory = createContextFactoryThrowing(new AuthenticationException(msg + "530, xxxx]"));
 		this.provider.setConvertSubErrorCodesToExceptions(true);
-		this.provider.authenticate(this.joe);
+		assertThatExceptionOfType(BadCredentialsException.class).isThrownBy(() -> this.provider.authenticate(this.joe));
 	}
 
 	@Test
@@ -250,100 +239,73 @@ public class ActiveDirectoryLdapAuthenticationProviderTests {
 		this.provider.contextFactory = createContextFactoryThrowing(
 				new AuthenticationException(msg + dataCode + ", xxxx]"));
 		this.provider.setConvertSubErrorCodesToExceptions(true);
-		this.thrown.expect(BadCredentialsException.class);
-		this.thrown.expect(new BaseMatcher<BadCredentialsException>() {
-			private Matcher<Object> causeInstance = CoreMatchers
-					.instanceOf(ActiveDirectoryAuthenticationException.class);
-
-			private Matcher<String> causeDataCode = CoreMatchers.equalTo(dataCode);
-
-			@Override
-			public boolean matches(Object that) {
-				Throwable t = (Throwable) that;
-				ActiveDirectoryAuthenticationException cause = (ActiveDirectoryAuthenticationException) t.getCause();
-				return this.causeInstance.matches(cause) && this.causeDataCode.matches(cause.getDataCode());
-			}
-
-			@Override
-			public void describeTo(Description desc) {
-				desc.appendText("getCause() ");
-				this.causeInstance.describeTo(desc);
-				desc.appendText("getCause().getDataCode() ");
-				this.causeDataCode.describeTo(desc);
-			}
-		});
-		this.provider.authenticate(this.joe);
+		assertThatExceptionOfType(BadCredentialsException.class).isThrownBy(() -> this.provider.authenticate(this.joe))
+				.withCauseInstanceOf(ActiveDirectoryAuthenticationException.class)
+				.satisfies((ex) -> assertThat(((ActiveDirectoryAuthenticationException) ex.getCause()).getDataCode())
+						.isEqualTo(dataCode));
 	}
 
-	@Test(expected = CredentialsExpiredException.class)
+	@Test
 	public void expiredPasswordIsCorrectlyMapped() {
 		this.provider.contextFactory = createContextFactoryThrowing(new AuthenticationException(msg + "532, xxxx]"));
-		try {
-			this.provider.authenticate(this.joe);
-			fail("BadCredentialsException should had been thrown");
-		}
-		catch (BadCredentialsException expected) {
-		}
+		assertThatExceptionOfType(BadCredentialsException.class).isThrownBy(() -> this.provider.authenticate(this.joe));
 		this.provider.setConvertSubErrorCodesToExceptions(true);
-		this.provider.authenticate(this.joe);
+		assertThatExceptionOfType(CredentialsExpiredException.class)
+				.isThrownBy(() -> this.provider.authenticate(this.joe));
 	}
 
-	@Test(expected = DisabledException.class)
+	@Test
 	public void accountDisabledIsCorrectlyMapped() {
 		this.provider.contextFactory = createContextFactoryThrowing(new AuthenticationException(msg + "533, xxxx]"));
 		this.provider.setConvertSubErrorCodesToExceptions(true);
-		this.provider.authenticate(this.joe);
+		assertThatExceptionOfType(DisabledException.class).isThrownBy(() -> this.provider.authenticate(this.joe));
 	}
 
-	@Test(expected = AccountExpiredException.class)
+	@Test
 	public void accountExpiredIsCorrectlyMapped() {
 		this.provider.contextFactory = createContextFactoryThrowing(new AuthenticationException(msg + "701, xxxx]"));
 		this.provider.setConvertSubErrorCodesToExceptions(true);
-		this.provider.authenticate(this.joe);
+		assertThatExceptionOfType(AccountExpiredException.class).isThrownBy(() -> this.provider.authenticate(this.joe));
 	}
 
-	@Test(expected = LockedException.class)
+	@Test
 	public void accountLockedIsCorrectlyMapped() {
 		this.provider.contextFactory = createContextFactoryThrowing(new AuthenticationException(msg + "775, xxxx]"));
 		this.provider.setConvertSubErrorCodesToExceptions(true);
-		this.provider.authenticate(this.joe);
+		assertThatExceptionOfType(LockedException.class).isThrownBy(() -> this.provider.authenticate(this.joe));
 	}
 
-	@Test(expected = BadCredentialsException.class)
+	@Test
 	public void unknownErrorCodeIsCorrectlyMapped() {
 		this.provider.contextFactory = createContextFactoryThrowing(new AuthenticationException(msg + "999, xxxx]"));
 		this.provider.setConvertSubErrorCodesToExceptions(true);
-		this.provider.authenticate(this.joe);
+		assertThatExceptionOfType(BadCredentialsException.class).isThrownBy(() -> this.provider.authenticate(this.joe));
 	}
 
-	@Test(expected = BadCredentialsException.class)
+	@Test
 	public void errorWithNoSubcodeIsHandledCleanly() {
 		this.provider.contextFactory = createContextFactoryThrowing(new AuthenticationException(msg));
 		this.provider.setConvertSubErrorCodesToExceptions(true);
-		this.provider.authenticate(this.joe);
+		assertThatExceptionOfType(BadCredentialsException.class).isThrownBy(() -> this.provider.authenticate(this.joe));
 	}
 
-	@Test(expected = org.springframework.ldap.CommunicationException.class)
+	@Test
 	public void nonAuthenticationExceptionIsConvertedToSpringLdapException() throws Throwable {
-		try {
+		assertThatExceptionOfType(InternalAuthenticationServiceException.class).isThrownBy(() -> {
 			this.provider.contextFactory = createContextFactoryThrowing(new CommunicationException(msg));
 			this.provider.authenticate(this.joe);
-		}
-		catch (InternalAuthenticationServiceException ex) {
-			// Since GH-8418 ldap communication exception is wrapped into
-			// InternalAuthenticationServiceException.
-			// This test is about the wrapped exception, so we throw it.
-			throw ex.getCause();
-		}
+		}).withCauseInstanceOf(org.springframework.ldap.CommunicationException.class);
 	}
 
-	@Test(expected = org.springframework.security.authentication.InternalAuthenticationServiceException.class)
+	@Test
 	public void connectionExceptionIsWrappedInInternalException() throws Exception {
 		ActiveDirectoryLdapAuthenticationProvider noneReachableProvider = new ActiveDirectoryLdapAuthenticationProvider(
 				"mydomain.eu", NON_EXISTING_LDAP_PROVIDER, "dc=ad,dc=eu,dc=mydomain");
 		noneReachableProvider
 				.setContextEnvironmentProperties(Collections.singletonMap("com.sun.jndi.ldap.connect.timeout", "5"));
-		noneReachableProvider.doAuthentication(this.joe);
+		assertThatExceptionOfType(
+				org.springframework.security.authentication.InternalAuthenticationServiceException.class)
+						.isThrownBy(() -> noneReachableProvider.doAuthentication(this.joe));
 	}
 
 	@Test
@@ -353,14 +315,15 @@ public class ActiveDirectoryLdapAuthenticationProviderTests {
 		checkAuthentication("dc=ad,dc=eu,dc=mydomain", provider);
 	}
 
-	@Test(expected = IllegalArgumentException.class)
+	@Test
 	public void setContextEnvironmentPropertiesNull() {
-		this.provider.setContextEnvironmentProperties(null);
+		assertThatIllegalArgumentException().isThrownBy(() -> this.provider.setContextEnvironmentProperties(null));
 	}
 
-	@Test(expected = IllegalArgumentException.class)
+	@Test
 	public void setContextEnvironmentPropertiesEmpty() {
-		this.provider.setContextEnvironmentProperties(new Hashtable<>());
+		assertThatIllegalArgumentException()
+				.isThrownBy(() -> this.provider.setContextEnvironmentProperties(new Hashtable<>()));
 	}
 
 	@Test
@@ -368,16 +331,10 @@ public class ActiveDirectoryLdapAuthenticationProviderTests {
 		Hashtable<String, Object> env = new Hashtable<>();
 		env.put("java.naming.ldap.factory.socket", "unknown.package.NonExistingSocketFactory");
 		this.provider.setContextEnvironmentProperties(env);
-		try {
-			this.provider.authenticate(this.joe);
-			fail("CommunicationException was expected with a root cause of ClassNotFoundException");
-		}
-		catch (InternalAuthenticationServiceException expected) {
-			assertThat(expected.getCause()).isInstanceOf(org.springframework.ldap.CommunicationException.class);
-			org.springframework.ldap.CommunicationException cause = (org.springframework.ldap.CommunicationException) expected
-					.getCause();
-			assertThat(cause.getRootCause()).isInstanceOf(ClassNotFoundException.class);
-		}
+		assertThatExceptionOfType(InternalAuthenticationServiceException.class)
+				.isThrownBy(() -> this.provider.authenticate(this.joe))
+				.withCauseInstanceOf(org.springframework.ldap.CommunicationException.class)
+				.withRootCauseInstanceOf(ClassNotFoundException.class);
 	}
 
 	ContextFactory createContextFactoryThrowing(final NamingException ex) {

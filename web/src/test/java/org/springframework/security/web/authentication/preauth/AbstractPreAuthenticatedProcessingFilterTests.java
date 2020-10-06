@@ -42,7 +42,8 @@ import org.springframework.security.web.authentication.ForwardAuthenticationSucc
 import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.fail;
+import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
+import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.mock;
@@ -90,7 +91,7 @@ public class AbstractPreAuthenticatedProcessingFilterTests {
 	}
 
 	/* SEC-881 */
-	@Test(expected = BadCredentialsException.class)
+	@Test
 	public void exceptionIsThrownOnFailedAuthenticationIfContinueFilterChainOnUnsuccessfulAuthenticationSetToFalse()
 			throws Exception {
 		AuthenticationManager am = mock(AuthenticationManager.class);
@@ -98,22 +99,15 @@ public class AbstractPreAuthenticatedProcessingFilterTests {
 		this.filter.setContinueFilterChainOnUnsuccessfulAuthentication(false);
 		this.filter.setAuthenticationManager(am);
 		this.filter.afterPropertiesSet();
-		this.filter.doFilter(new MockHttpServletRequest(), new MockHttpServletResponse(), mock(FilterChain.class));
+		assertThatExceptionOfType(BadCredentialsException.class).isThrownBy(() -> this.filter
+				.doFilter(new MockHttpServletRequest(), new MockHttpServletResponse(), mock(FilterChain.class)));
 		assertThat(SecurityContextHolder.getContext().getAuthentication()).isNull();
 	}
 
 	@Test
 	public void testAfterPropertiesSet() {
 		ConcretePreAuthenticatedProcessingFilter filter = new ConcretePreAuthenticatedProcessingFilter();
-		try {
-			filter.afterPropertiesSet();
-			fail("AfterPropertiesSet didn't throw expected exception");
-		}
-		catch (IllegalArgumentException expected) {
-		}
-		catch (Exception unexpected) {
-			fail("AfterPropertiesSet throws unexpected exception");
-		}
+		assertThatIllegalArgumentException().isThrownBy(filter::afterPropertiesSet);
 	}
 
 	// SEC-2045

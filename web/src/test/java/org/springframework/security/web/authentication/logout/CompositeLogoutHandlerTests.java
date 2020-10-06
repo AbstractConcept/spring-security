@@ -22,14 +22,12 @@ import java.util.List;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-import org.junit.Rule;
 import org.junit.Test;
-import org.junit.rules.ExpectedException;
 import org.mockito.InOrder;
 
 import org.springframework.security.core.Authentication;
 
-import static org.assertj.core.api.Assertions.fail;
+import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.willThrow;
 import static org.mockito.Mockito.inOrder;
@@ -45,14 +43,10 @@ import static org.mockito.Mockito.verify;
  */
 public class CompositeLogoutHandlerTests {
 
-	@Rule
-	public ExpectedException exception = ExpectedException.none();
-
 	@Test
 	public void buildEmptyCompositeLogoutHandlerThrowsException() {
-		this.exception.expect(IllegalArgumentException.class);
-		this.exception.expectMessage("LogoutHandlers are required");
-		new CompositeLogoutHandler();
+		assertThatIllegalArgumentException().isThrownBy(() -> new CompositeLogoutHandler())
+				.withMessage("LogoutHandlers are required");
 	}
 
 	@Test
@@ -88,12 +82,8 @@ public class CompositeLogoutHandlerTests {
 				any(HttpServletResponse.class), any(Authentication.class));
 		List<LogoutHandler> logoutHandlers = Arrays.asList(firstLogoutHandler, secondLogoutHandler);
 		LogoutHandler handler = new CompositeLogoutHandler(logoutHandlers);
-		try {
-			handler.logout(mock(HttpServletRequest.class), mock(HttpServletResponse.class), mock(Authentication.class));
-			fail("Expected Exception");
-		}
-		catch (IllegalArgumentException success) {
-		}
+		assertThatIllegalArgumentException().isThrownBy(() -> handler.logout(mock(HttpServletRequest.class),
+				mock(HttpServletResponse.class), mock(Authentication.class)));
 		InOrder logoutHandlersInOrder = inOrder(firstLogoutHandler, secondLogoutHandler);
 		logoutHandlersInOrder.verify(firstLogoutHandler, times(1)).logout(any(HttpServletRequest.class),
 				any(HttpServletResponse.class), any(Authentication.class));

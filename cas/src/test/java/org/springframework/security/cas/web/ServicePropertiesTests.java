@@ -22,7 +22,7 @@ import org.springframework.security.cas.SamlServiceProperties;
 import org.springframework.security.cas.ServiceProperties;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.fail;
+import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
 
 /**
  * Tests {@link ServiceProperties}.
@@ -31,29 +31,19 @@ import static org.assertj.core.api.Assertions.fail;
  */
 public class ServicePropertiesTests {
 
-	@Test(expected = IllegalArgumentException.class)
+	@Test
 	public void detectsMissingService() throws Exception {
 		ServiceProperties sp = new ServiceProperties();
-		sp.afterPropertiesSet();
+		assertThatIllegalArgumentException().isThrownBy(sp::afterPropertiesSet);
 	}
 
 	@Test
 	public void nullServiceWhenAuthenticateAllTokens() throws Exception {
 		ServiceProperties sp = new ServiceProperties();
 		sp.setAuthenticateAllArtifacts(true);
-		try {
-			sp.afterPropertiesSet();
-			fail("Expected Exception");
-		}
-		catch (IllegalArgumentException success) {
-		}
+		assertThatIllegalArgumentException().isThrownBy(sp::afterPropertiesSet);
 		sp.setAuthenticateAllArtifacts(false);
-		try {
-			sp.afterPropertiesSet();
-			fail("Expected Exception");
-		}
-		catch (IllegalArgumentException success) {
-		}
+		assertThatIllegalArgumentException().isThrownBy(sp::afterPropertiesSet);
 	}
 
 	@Test
